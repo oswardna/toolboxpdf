@@ -7,6 +7,7 @@ require_once __DIR__ . '/../config/app.php';
 require_once __DIR__ . '/../config/db.php';
 require_once __DIR__ . '/../classes/Auth.php';
 require_once __DIR__ . '/../classes/FileProcessor.php';
+require_once __DIR__ . '/../classes/WordProcessor.php';
 require_once __DIR__ . '/../includes/functions.php';
 
 header('Content-Type: application/json');
@@ -97,9 +98,26 @@ try {
             $success = $processor->compressPdf($inputPath, $outputPath, $quality);
             break;
         case 'word-to-pdf':
+            $wp = new WordProcessor();
+            if ($wp->wordToPdf($inputPath, $outputPath)) {
+                $success = true;
+            } else {
+                // Fallback to LibreOffice if it somehow exists
+                $tempDir = $uploadDir . 'tmp_' . bin2hex(random_bytes(4)) . '/';
+                mkdir($tempDir);
+                if ($processor->officeToPdf($inputPath, $tempDir)) {
+                    $files = glob($tempDir . '*.pdf');
+                    if (!empty($files)) {
+                        rename($files[0], $outputPath);
+                        $success = true;
+                    }
+                }
+                @rmdir($tempDir);
+            }
+            break;
         case 'excel-to-pdf':
         case 'ppt-to-pdf':
-            // LibreOffice converts to a directory, then we find the file
+            // These still need LibreOffice
             $tempDir = $uploadDir . 'tmp_' . bin2hex(random_bytes(4)) . '/';
             if (!mkdir($tempDir, 0777, true)) {
                 $processor->updateJob($jobId, 'failed', null, 'Failed to create temp directory');
