@@ -86,15 +86,25 @@ class FileProcessor {
      * Word/Excel/PPT to PDF using LibreOffice
      */
     public function officeToPdf(string $input, string $outputDir): bool {
+        // Use a temporary user profile to avoid permission issues with the home directory
+        $profileDir = $outputDir . 'profile';
+        if (!is_dir($profileDir)) mkdir($profileDir, 0777, true);
+
         $cmd = sprintf(
-            '%s --headless --convert-to pdf --outdir %s %s',
+            '%s -env:UserInstallation=%s --headless --convert-to pdf --outdir %s %s 2>&1',
             escapeshellarg($this->binaries['libreoffice']),
+            escapeshellarg('file://' . str_replace('\\', '/', $profileDir)),
             escapeshellarg($outputDir),
             escapeshellarg($input)
         );
 
         exec($cmd, $out, $ret);
-        return $ret === 0;
+        
+        if ($ret !== 0) {
+            error_log("LibreOffice failed with exit code $ret. Output: " . implode("\n", $out));
+            return false;
+        }
+        return true;
     }
 
     /**

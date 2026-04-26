@@ -14,7 +14,7 @@ define('APP_TAGLINE', 'All your PDF & image tools in one place');
 define('APP_VERSION', '1.0.0');
 
 // ─── URLs ────────────────────────────────────────────────
-define('BASE_URL', 'http://localhost/myutility/toolbox');
+define('BASE_URL', 'https://palchat.net');
 
 // ─── File handling ───────────────────────────────────────
 define('UPLOAD_DIR',   __DIR__ . '/../uploads/');

@@ -101,7 +101,11 @@ try {
         case 'ppt-to-pdf':
             // LibreOffice converts to a directory, then we find the file
             $tempDir = $uploadDir . 'tmp_' . bin2hex(random_bytes(4)) . '/';
-            mkdir($tempDir);
+            if (!mkdir($tempDir, 0777, true)) {
+                $processor->updateJob($jobId, 'failed', null, 'Failed to create temp directory');
+                echo json_encode(['error' => 'Server error: Failed to create processing directory.']);
+                exit;
+            }
             if ($processor->officeToPdf($inputPath, $tempDir)) {
                 $files = glob($tempDir . '*.pdf');
                 if (!empty($files)) {

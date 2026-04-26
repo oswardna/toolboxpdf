@@ -5,9 +5,9 @@
 require_once __DIR__ . '/app.php';
 
 $dbHost = 'localhost';
-$dbName = 'toolbox';
-$dbUser = 'root';
-$dbPass = '';
+$dbName = 'palchatt_toolbox';
+$dbUser = 'palchatt_root90';
+$dbPass = 'JlYrKjXycTVsoh+5';
 $dbCharset = 'utf8mb4';
 
 $dsn = "mysql:host={$dbHost};dbname={$dbName};charset={$dbCharset}";
