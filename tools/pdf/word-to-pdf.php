@@ -3,12 +3,13 @@
     'slug' => 'word-to-pdf', 
     'icon' => 'file-earmark-word', 
     'category' => 'pdf',
-    'description' => 'Convert Word documents (.docx) to PDF with high fidelity. Runs in your browser.', 
+    'description' => 'Convert Word documents (.docx) to PDF with the highest possible browser fidelity.', 
     'accept' => '.docx',
     'extra_scripts' => [
         'https://unpkg.com/jszip/dist/jszip.min.js',
         'https://unpkg.com/docx-preview/dist/docx-preview.js',
-        'https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js'
+        'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js',
+        'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js'
     ]
 ]); ?>
 
@@ -18,48 +19,59 @@ async function onProcess(file) {
     reader.onload = async function(e) {
         const arrayBuffer = e.target.result;
         
-        // 1. Create a hidden element to render the Word document
-        const element = document.createElement('div');
-        element.style.padding = '0';
-        element.style.margin = '0';
-        element.style.backgroundColor = 'white';
-        element.style.width = '800px'; // Standard A4-ish width
-        document.body.appendChild(element);
+        // Create a dedicated container for rendering
+        const container = document.createElement('div');
+        container.style.position = 'absolute';
+        container.style.left = '-9999px';
+        container.style.width = '210mm'; // A4 Width
+        document.body.appendChild(container);
 
         try {
-            // 2. Render Word to HTML using docx-preview (much better fidelity than Mammoth)
-            await docx.renderAsync(arrayBuffer, element, null, {
-                className: "docx", //prefix class name for css rules
-                inWrapper: true, //enables rendering of wrapper around document content
-                ignoreWidth: false, //disables rendering width of document
-                ignoreHeight: false, //disables rendering height of document
-                ignoreFonts: false, //disables fonts rendering
-                breakPages: true, //enables page breaks rendering
-                ignoreLastRenderedPageBreak: false, //disables page breaks rendering
-                experimental: true, //enables experimental features (for example: tabs, table of contents, etc.)
-                trimXmlDeclaration: true, //if true, xml declaration will be removed from xml documents
-                useBase64URL: true, //if true, images, fonts, etc. will be converted to base64 url, otherwise to blob url
-                usePrettify: true, //if true, xml documents will be prettified
+            await docx.renderAsync(arrayBuffer, container, null, {
+                className: "docx",
+                inWrapper: true,
+                ignoreWidth: false,
+                ignoreHeight: false,
+                breakPages: true,
+                experimental: true,
+                useBase64URL: true
             });
 
-            // 3. Convert the rendered element to PDF
-            const opt = {
-                margin:       0,
-                filename:     file.name.replace('.docx', '.pdf'),
-                image:        { type: 'jpeg', quality: 0.98 },
-                html2canvas:  { scale: 2, useCORS: true, logging: false },
-                jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' },
-                pagebreak:    { mode: ['avoid-all', 'css', 'legacy'] }
-            };
+            // Use jspdf's advanced html method for better fidelity
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF({
+                orientation: 'p',
+                unit: 'mm',
+                format: 'a4',
+                compress: true
+            });
 
-            const pdfBlob = await html2pdf().set(opt).from(element).output('blob');
-            const url = URL.createObjectURL(pdfBlob);
-            ToolBoxUI.showDownloadResult(url, opt.filename);
+            // Target the rendered content wrapper
+            const content = container.querySelector('.docx-wrapper');
+            
+            await doc.html(content, {
+                callback: function (doc) {
+                    const url = doc.output('bloburl');
+                    ToolBoxUI.showDownloadResult(url, file.name.replace('.docx', '.pdf'));
+                },
+                x: 0,
+                y: 0,
+                width: 210, // Target width in mm
+                windowWidth: 794, // A4 width in pixels at 96 DPI
+                autoPaging: 'text',
+                html2canvas: {
+                    scale: 2, // Higher scale for better text sharpness
+                    useCORS: true,
+                    letterRendering: true
+                }
+            });
+
         } catch (err) {
             console.error(err);
             ToolBoxUI.showToast('Rendering error: ' + err.message, 'danger');
         } finally {
-            document.body.removeChild(element);
+            // Keep container temporarily for the callback to finish
+            setTimeout(() => document.body.removeChild(container), 5000);
         }
     };
     reader.readAsArrayBuffer(file);
@@ -67,13 +79,13 @@ async function onProcess(file) {
 </script>
 
 <style>
-/* Ensure docx-preview styles are captured correctly */
 .docx-wrapper {
     background: white !important;
-    padding: 0 !important;
+    padding: 20mm !important; /* Standard Word margins */
 }
 .docx {
-    margin-bottom: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
     box-shadow: none !important;
 }
 </style>

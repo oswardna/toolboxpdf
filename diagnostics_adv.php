@@ -17,7 +17,7 @@ $searchPaths = [
     '/bin/'
 ];
 
-$binaries = ['libreoffice', 'soffice', 'gs', 'convert', 'qpdf', 'tesseract'];
+$binaries = ['libreoffice', 'soffice', 'gs', 'convert', 'qpdf', 'tesseract', 'unoconv', 'pandoc'];
 
 echo "Searching for Binaries:\n";
 foreach ($binaries as $bin) {
