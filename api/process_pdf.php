@@ -10,6 +10,16 @@ require_once __DIR__ . '/../classes/FileProcessor.php';
 require_once __DIR__ . '/../classes/WordProcessor.php';
 require_once __DIR__ . '/../includes/functions.php';
 
+// Fatal Error Handler for debugging
+register_shutdown_function(function() {
+    $error = error_get_last();
+    if ($error && ($error['type'] === E_ERROR || $error['type'] === E_PARSE || $error['type'] === E_CORE_ERROR || $error['type'] === E_COMPILE_ERROR)) {
+        if (!headers_sent()) header('Content-Type: application/json');
+        echo json_encode(['error' => 'Critical Server Error: ' . $error['message'] . ' in ' . $error['file'] . ' on line ' . $error['line']]);
+        exit;
+    }
+});
+
 header('Content-Type: application/json');
 
 $auth = new Auth($pdo);
