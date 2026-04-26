@@ -111,6 +111,10 @@ function renderPremiumTool(array $toolConfig): void {
 
     <div id="results" class="d-none mt-4"></div>
 
+    <?php if (isset($toolConfig['extra_scripts'])): foreach($toolConfig['extra_scripts'] as $s): ?>
+    <script src="<?= $s ?>"></script>
+    <?php endforeach; endif; ?>
+
     <script src="<?= BASE_URL ?>/assets/js/common.js"></script>
     <script>
     let currentFile = null;
@@ -130,6 +134,19 @@ function renderPremiumTool(array $toolConfig): void {
 
     document.getElementById('process-btn').addEventListener('click', async () => {
         if (!currentFile) return;
+        
+        // Handle Client-Side Processing if defined
+        if (typeof onProcess === 'function') {
+            ToolBoxUI.showProcessing('process-btn', 'Processing in browser...');
+            try {
+                await onProcess(currentFile);
+            } catch (e) {
+                ToolBoxUI.showToast('Processing failed: ' + e.message, 'danger');
+            }
+            ToolBoxUI.hideProcessing('process-btn');
+            return;
+        }
+
         ToolBoxUI.showProcessing('process-btn', 'Uploading & Processing...');
 
         const formData = new FormData();
@@ -150,23 +167,28 @@ function renderPremiumTool(array $toolConfig): void {
             if (data.error) {
                 ToolBoxUI.showToast(data.error, 'danger');
             } else if (data.download_url) {
-                const parent = document.getElementById('results');
-                parent.classList.remove('d-none');
-                parent.innerHTML = `
-                    <div class="tb-dash-card text-center">
-                        <i class="bi bi-check-circle text-success" style="font-size:2.5rem"></i>
-                        <h5 class="fw-bold mt-2 mb-3">Processing Complete!</h5>
-                        <a href="${data.download_url}" class="btn tb-btn-primary btn-lg">
-                            <i class="bi bi-download me-2"></i>Download Result
-                        </a>
-                        <p class="text-muted small mt-2 mb-0">File auto-deletes in 30 minutes</p>
-                    </div>`;
+                ToolBoxUI.showDownloadResult(data.download_url);
             }
         } catch (e) {
             ToolBoxUI.showToast('Upload failed: ' + e.message, 'danger');
         }
         ToolBoxUI.hideProcessing('process-btn');
     });
+
+    // Helper for tools to show the result
+    ToolBoxUI.showDownloadResult = (url, filename = 'result.pdf') => {
+        const parent = document.getElementById('results');
+        parent.classList.remove('d-none');
+        parent.innerHTML = `
+            <div class="tb-dash-card text-center">
+                <i class="bi bi-check-circle text-success" style="font-size:2.5rem"></i>
+                <h5 class="fw-bold mt-2 mb-3">Processing Complete!</h5>
+                <a href="${url}" download="${filename}" class="btn tb-btn-primary btn-lg">
+                    <i class="bi bi-download me-2"></i>Download Result
+                </a>
+                <p class="text-muted small mt-2 mb-0">Conversion done successfully.</p>
+            </div>`;
+    };
     </script>
     <?php endif; ?>
 </div>
